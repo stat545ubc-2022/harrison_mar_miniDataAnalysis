@@ -1,6 +1,6 @@
 ---
 title: "Mini Data-Analysis Deliverable 1"
-output: html_document
+output: github_document
 ---
 
 # Welcome to your (maybe) first-ever data analysis project!
@@ -129,7 +129,11 @@ I will work with either the "vancouver_trees" or "steam_games" datasets. I chose
 1.4 Time for the final decision! Going back to the beginning, it's important to have an *end goal* in mind. For example, if I had chosen the `titanic` dataset for my project, I might've wanted to explore the relationship between survival and other variables. Try to think of 1 research question that you would want to answer with each dataset. Note them down below, and make your final choice based on what seems more interesting to you!
 
 <!-------------------------- Start your work below ---------------------------->
+I think that trying to determine what the biggest influences are on video game success would be an interesting question to try and answer. I am initially unsure of how much what operating system the game runs on impacts a users experience, whether the cost of the game is a large factor, or if a certain time f year aligns with best sales and/or reviews.
 
+For the "vancouver_trees" dataset, I would be curious to explore what species of trees do best in different parts of the city, and what impact urbanization is having on specific species as well.
+
+Between these two datasets, I think I am most interested in working with "vancouver_trees" trying to determine how neighbourhood and plant area affecting the health of trees in relation to height and diameter.
 <!----------------------------------------------------------------------------->
 
 # Important note
@@ -144,18 +148,67 @@ If we rewind and go back to the learning objectives, you'll see that by the end 
 
 2.1 Complete *4 out of the following 8 exercises* to dive deeper into your data. All datasets are different and therefore, not all of these tasks may make sense for your data - which is why you should only answer *4*. Use *dplyr* and *ggplot*.
 
-1.  Plot the distribution of a numeric variable.
+1.  Plot the distribution of a numeric variable. (DONE)
 2.  Create a new variable based on other variables in your data (only if it makes sense)
-3.  Investigate how many missing values there are per variable. Can you find a way to plot this?
-4.  Explore the relationship between 2 variables in a plot.
-5.  Filter observations in your data according to your own criteria. Think of what you'd like to explore - again, if this was the `titanic` dataset, I may want to narrow my search down to passengers born in a particular year...
-6.  Use a boxplot to look at the frequency of different observations within a single variable. You can do this for more than one variable if you wish!
-7.  Make a new tibble with a subset of your data, with variables and observations that you are interested in exploring.
-8.  Use a density plot to explore any of your variables (that are suitable for this type of plot).
+3.  Investigate how many missing values there are per variable. Can you find a way to plot this? (DONE)
+4.  Explore the relationship between 2 variables in a plot. "height_range_id" vs "plant_area"
+5.  Filter observations in your data according to your own criteria. Think of what you'd like to explore - again, if this was the `titanic` dataset, I may want to narrow my search down to passengers born in a particular year... "filter into neightbourhoods"
+6.  Use a boxplot to look at the frequency of different observations within a single variable. You can do this for more than one variable if you wish! "species"
+7.  Make a new tibble with a subset of your data, with variables and observations that you are interested in exploring. (DONE)
+8.  Use a density plot to explore any of your variables (that are suitable for this type of plot). (DONE)
 
 2.2 For each of the 4 exercises that you complete, provide a *brief explanation* of why you chose that exercise in relation to your data (in other words, why does it make sense to do that?), and sufficient comments for a reader to understand your reasoning and code.
 
 <!-------------------------- Start your work below ---------------------------->
+The first thing I want to do to this dataset is determine how many missing values there are per variable. This will be valuable information to have for numeric columns where I may want to take mean values (for example diameter of trees), as well as knowing where I may need to utilize "na.rm = TRUE" when manipulating certain variables.
+```{r}
+
+na_vals <- vancouver_trees %>% 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+
+```
+
+```{r}
+#creating a dataframe that takes the sum of NA values in each column in vancouver_trees
+null_values <- enframe(colSums(is.na(vancouver_trees)))
+
+
+#plotting the count of NA values in each column
+ggplot(null_values, aes(name, value)) +
+  geom_col() +
+  coord_flip()
+```
+
+From this we can see that 5 out of the 20 variables in this dataset contain missing data.
+
+Next, I want to explore the density distribution of height_range_id in each neighborhood in Vancouver. This plot will allow me to quickly see which neighbourhoods contain the largest distribution of tree heights and could be used to further investigate what parts of the city are better suited to growing taller trees.
+
+```{r}
+#Plotting height_range_id versus neighbourhood in density ridges plot
+ggplot(vancouver_trees, aes(height_range_id, neighbourhood_name)) +
+  ggridges::geom_density_ridges()
+
+```
+
+The next thing I want to do is create a subset of my data that contains the most relevant information related to the questions I want to answer for the time being. If it turns out I change some of my research questions or realize that I might need some of the data in the original dataframe, then I can come back and edit this code chunk.At the time being, data related to individual tree id, street name, street block, and street number data are not that interesting to me.
+
+```{r}
+
+#creating a new tibble where I am selecting all columns except for columns related to tree id, street name, street block, and street number
+
+vancouver_trees_new <- select(vancouver_trees, -c(tree_id,civic_number,std_street,assigned,on_street_block,on_street,street_side_name))
+
+glimpse(vancouver_trees_new)
+```
+
+Finally, I want to take a look at the distribution of height_range_id since this is a variable that is of interest  to me for some of my potential research questions.
+
+```{r}
+#using the new "vancouver_trees_new tibble and creating a histogram to look at distribution of height_range_id
+vancouver_trees_new %>%
+  ggplot(aes(height_range_id)) +
+  geom_histogram(binwidth = 0.5)
+```
 
 <!----------------------------------------------------------------------------->
 
@@ -164,7 +217,18 @@ If we rewind and go back to the learning objectives, you'll see that by the end 
 So far, you have chosen a dataset and gotten familiar with it through exploring the data. Now it's time to figure out 4 research questions that you would like to answer with your data! Write the 4 questions and any additional comments at the end of this deliverable. These questions are not necessarily set in stone - TAs will review them and give you feedback; therefore, you may choose to pursue them as they are for the rest of the project, or make modifications!
 
 <!--- *****START HERE***** --->
+1. How does plant_area affect the height of trees?
 
+
+2. What size (height) of trees is most common in Vancouver?
+
+
+3. What is the relationship between height_range_id and diameter?
+
+
+4. Are root barriers used more in certain neighbourhoods?
+
+<!----------------------------------------------------------------------------->
 # Task 4: Process and summarize your data (13 points)
 
 From Task 2, you should have an idea of the basic structure of your dataset (e.g. number of rows and columns, class types, etc.). Here, we will start investigating your data more in-depth using various data manipulation functions.
@@ -192,7 +256,128 @@ Ensure that the output of each operation is printed!
 Make sure it's clear what research question you are doing each operation for!
 
 <!------------------------- Start your work below ----------------------------->
+Investigating research question 1 by computing the number of observations in the "plant_area" categorical variable. This can help tell me what the distribution of each type of plant area is and can then hopefully be used to answer how plant area type impacts the overall tree height.
 
+```{r}
+#First create a tibble which shows the count of each type of observation in the plant_area variable
+
+df <- vancouver_trees %>%
+  count(plant_area)
+
+#There are duplicates of some observations in the form of the same letter representation in upper and lower case. In order to fix this start by making all characters upper case
+
+pa_count <- mutate_all(df, .funs = toupper) 
+
+#Now change the "n" column in this tibble to from character to numeric so we can apply the sum function to add up the rows which are identical
+
+pa_count$n <- as.numeric(as.character(pa_count$n))
+
+pa_count_clean <- pa_count %>%
+  group_by(plant_area) %>%
+  summarise(n = sum(n))
+
+print(pa_count_clean)
+
+#further splitting up the plant_area variable fo further analysis and tidying - for later analysis
+#char_plant_area <- df_2_clean %>%
+#  arrange(desc(plant_area)) %>%
+#  slice(1:8)
+
+#numeric_plant_area <- df_2_clean %>%
+#  arrange(desc(plant_area)) %>%
+#  slice(9:45)
+
+#numeric_plant_area$plant_area <- as.numeric(as.character(numeric_plant_area$plant_area))
+```
+
+To further address research question 1 I will plot the number of observations of each plant area type against the height of each tree and see what the relationship between the two variable is. Because of the large counts for observations, I will use a log scale on the x-axis (). This is a semi-useful graph but it could be better by grouping the plant area into further categories so the y-axis isnt so cluttered.
+
+```{r}
+ggplot(pa_count_clean, aes(n, plant_area)) +
+  geom_col() +
+  scale_x_log10()
+```
+
+I will now investigate research question 3. First I want to create summary statistics for the numerical variable height_range_id for each type of tree. This summary of height_range_id is helpful for being able to glimpse at a variety of different summary statistics for tree species heights, but ultimately I am only interested in the means for this research question.
+
+```{r}
+vancouver_trees %>%
+  group_by(species_name) %>%
+  summarise(mean = mean(height_range_id, na.rm = TRUE),
+            sd = sd(height_range_id, na.rm = TRUE),
+            range = max(height_range_id, na.rm = TRUE) - min(height_range_id, na.rm = TRUE),
+            median = median(height_range_id, na.rm = TRUE))
+
+```
+
+Next, I will find the means of both variables and plot them against one another. This should help give me an answer as to whether there is a relationship between tree height and tree diameter across all tree species. 
+
+```{r}
+#Create a new tibble which holds the species names of trees and the means of their height and diameters
+mean_tree_dims <- vancouver_trees %>%
+  group_by(species_name) %>%
+  summarise(mean_height = mean(height_range_id, na.rm = TRUE), 
+            mean_diameter = mean(diameter, na.rm = TRUE))
+
+#Plot the mean height vs the mean diameter - since there are a large amount of data points clustered in the lower mean diameter and height section of the chart, decreasing the alpha transparency can help visualize just how densly populated that area is
+ggplot(mean_tree_dims, aes(mean_height, mean_diameter)) +
+  geom_point(alpha = 0.4)
+```
+
+To investigate my research question 4 I will start by taking the categorical variables of "neighbourhood_name" and "root_barrier" and counting the number of trees per neighbourhood that have, and do not have, root barriers. This will quickly let me know if certain neighbourhoods have more trees with or without root barriers
+
+```{r}
+
+count_rb_per_neighbourhood <- vancouver_trees %>%
+  group_by(neighbourhood_name) %>%
+  filter(root_barrier == 'Y') %>%
+  summarise(n = n())
+
+count_rb_per_neighbourhood
+
+count_no_rb_per_neighbourhood <- vancouver_trees %>%
+  group_by(neighbourhood_name) %>%
+  filter(root_barrier == 'N') %>%
+  summarise(n = n())
+
+count_no_rb_per_neighbourhood
+
+```
+
+
+To address research question 2, I will create a new categorical variable out of an existing numeric variable "height_range_id". This can help group the observations together and take the previous height range id's into categories that are more easily interpreted.
+
+```{r}
+#Creating new categorical variable "height_bins" which groups together different tree heights into categories of xsmall, small, medium, large, and xlarge trees
+height_cats <- vancouver_trees %>%
+  mutate(height_bins = cut(height_range_id, breaks = c(0,2,4,6,8,10), labels = c("xsmall", "small", "medium", "large", "xlarge")))
+
+height_cats
+```
+
+Next, I will create a histogram that groups together the count of each unique observation in the new categorical variable "height_bins" so I can see what category of tree height is most common in Vancouver.
+```{r}
+#Creating 3 histograms from "counts" of new height_bins categorical variable (used geom_col to create histogram because variable is discrete) with different binwidths
+height_cats %>%
+  group_by(height_bins) %>%
+  summarize(n = n(), na.rm = TRUE) %>%
+  ggplot(aes(height_bins, n)) +
+  geom_col(width = 2)
+
+height_cats %>%
+  group_by(height_bins) %>%
+  summarize(n = n(), na.rm = TRUE) %>%
+  ggplot(aes(height_bins, n)) +
+  geom_col(width = 0.5)
+
+height_cats %>%
+  group_by(height_bins) %>%
+  summarize(n = n(), na.rm = TRUE) %>%
+  ggplot(aes(height_bins, n)) +
+  geom_col(width = 0.1)
+
+# Based on the resulting graphs, the binwidth of 0.5 seems like the best option to display this data. A binwidth of 2 is too wide and the columns overlap one another making it hard to distinguish between each bin, and the bunwidth of 0.1 is very narrow, leaving too much blank space on the graph.
+```
 <!----------------------------------------------------------------------------->
 
 ### 1.2 (3 points)
@@ -200,7 +385,7 @@ Make sure it's clear what research question you are doing each operation for!
 Based on the operations that you've completed, how much closer are you to answering your research questions? Think about what aspects of your research questions remain unclear. Can your research questions be refined, now that you've investigated your data a bit more? Which research questions are yielding interesting results?
 
 <!-------------------------- Start your work below ---------------------------->
-
+I am slightly closer to answering some of my research questions, however I need to do some further tidying of my data to come to any conclusions. My research questions 1 and 2 seem to be yeilding interesting results and wit hmore tidying of this data I think I would be able to get closer to answering these questions. Research questions 3 and 4 seem to be a bit more straight forward in terms of finding answers to these questions with less intensive manipulation of the dataset, so I might need to revise these questions and think of some better research questions. One avenue I could explore is looking at a subset of the data related to the most common tree species, or the largest (in height or diameter) trees.
 <!----------------------------------------------------------------------------->
 
 ### Attribution
