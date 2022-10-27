@@ -264,9 +264,13 @@ Investigating research question 1 by computing the number of observations in the
 df <- vancouver_trees %>%
   count(plant_area)
 
+df
+
 #There are duplicates of some observations in the form of the same letter representation in upper and lower case. In order to fix this start by making all characters upper case
 
 pa_count <- mutate_all(df, .funs = toupper) 
+
+pa_count
 
 #Now change the "n" column in this tibble to from character to numeric so we can apply the sum function to add up the rows which are identical
 

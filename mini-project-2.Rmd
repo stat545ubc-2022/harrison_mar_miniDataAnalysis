@@ -39,7 +39,7 @@ By the end of this milestone, you should:
 
 Begin by loading your data and the tidyverse package below:
 
-```{r, message = FALSE}
+```{r}
 library(datateachr) # <- might contain the data you picked!
 library(tidyverse)
 ```
@@ -61,6 +61,17 @@ A reminder of the definition of *tidy* data:
 Based on the definition above, can you identify if your data is tidy or untidy? Go through all your columns, or if you have \>8 variables, just pick 8, and explain whether the data is untidy or tidy.
 
 <!--------------------------- Start your work below --------------------------->
+```{r}
+head(vancouver_trees)
+glimpse(vancouver_trees)
+class(vancouver_trees)
+
+vancouver_trees %>%
+  count(neighbourhood_name)
+
+```
+
+From what I can see, this dataset is relatively tidy. Every column represents a different variable, every row is a specific observation (individual tree id), and every cell is a single measurement. The one variable/column that could potentially be considered as untidy is "plant_area" where there are a mix of numerical and categorical data within the column. A solution could be to split the column into 2 different columns, keeping the measurements in "plant_area" as the categorical/letter based data, and then creating a new column to hold all of the "continuous"/numerical data and call it something like "width_of_blvrd". However, a downside of this would be the relatively large amount of "NA" cells in each of the columns.
 
 <!----------------------------------------------------------------------------->
 
@@ -73,7 +84,43 @@ If your data is untidy, then tidy it! Then, untidy it back to it's original stat
 Be sure to explain your reasoning for this task. Show us the "before" and "after".
 
 <!--------------------------- Start your work below --------------------------->
+```{r}
+# original vancouver_trees tibble before any alterations
 
+head(vancouver_trees)
+
+# putting the street block number and name together into one column, could potentially be useful but also runs the risk of being too coarse if certain street blocks within a neighbourhood need to be analyzed
+
+vancouver_trees %>%
+  unite(col = "street_block_info",
+        c(on_street_block, on_street),
+        sep = " ")
+
+# combining the longitude and latitude together into a coordinates variable which shortens the tibbles number of columns as well - probably easier to compile the raw data in this separated form but could make sense to have these together
+vancouver_trees %>%
+  unite(col = "coordinates",
+        c(longitude, latitude),
+        sep = ", ")
+
+# making the dataset untidy by creating separate columns for each neighbourhood and placing the diameter value as the observaitonal value for each tree - this makes for an unreasonably "wide" dataset and results in a very large number of NA values scattered throughout the dataset
+
+untidy_1 <- vancouver_trees %>%
+  pivot_wider(names_from = neighbourhood_name,
+              values_from = diameter)
+
+untidy_1
+
+# tidying the dataset back to its original state
+
+van_trees_og <- untidy_1 %>%
+  pivot_longer(cols = c(-tree_id, -civic_number, -std_street, -genus_name, -species_name, -cultivar_name, -common_name, -assigned, -root_barrier, -plant_area, -on_street_block, -on_street, -street_side_name, -height_range_id, -curb, -date_planted, -longitude, -latitude), 
+               names_to = "neighbourhood_names", 
+               values_to = "diameter",
+               values_drop_na = TRUE)
+
+van_trees_og
+
+```
 <!----------------------------------------------------------------------------->
 
 ### 2.3 (7.5 points)
@@ -82,21 +129,57 @@ Now, you should be more familiar with your data, and also have made progress in 
 
 <!-------------------------- Start your work below ---------------------------->
 
-1.  *FILL_THIS_IN*
-2.  *FILL_THIS_IN*
+1.  How does plant_area affect the diameter growth of trees? More specifically, are there neighbourhoods in which this is more or less impactful?
+2.  How has the distribution of large trees vs small trees changed over time in each neighbourhood? And has there been a shift in the types of trees planted over time?
 
 <!----------------------------------------------------------------------------->
 
 Explain your decision for choosing the above two research questions.
 
 <!--------------------------- Start your work below --------------------------->
+I decided to keep my research question related to plant_area and diameter growth of trees because I was not able to parse the data as effectively as I wanted to in the last mini data analysis project. Determining this relationship seems like it could help make better informed decisions when deciding where to plant further trees. 
 
+I added a new research question different from those in my first mini data analysis assignment which is more focused on using the time data included in the dataset. This data could help track trends in planting efforts over the years and tell us whether planting has increased or decreased in certain neighbourhoods over time. 
 <!----------------------------------------------------------------------------->
 
 Now, try to choose a version of your data that you think will be appropriate to answer these 2 questions. Use between 4 and 8 functions that we've covered so far (i.e. by filtering, cleaning, tidy'ing, dropping irrelevant columns, etc.).
 
 <!--------------------------- Start your work below --------------------------->
+```{r}
+# getting rid of columns that are not of interest to me right now
+van_trees_i <- vancouver_trees %>%
+  select(c(-assigned, -on_street_block, -on_street, -street_side_name, -curb))
 
+# new tibble where only trees with letter character inputs for plant_area are considered
+pa_let <- van_trees_i %>%
+  filter(plant_area %in% c("B", "C", "G", "L", "M", "N", "P", "Y"))
+
+pa_let
+
+# new tibble where only trees with number inputs for plant_area are considered
+pa_num <- van_trees_i %>%
+  filter(str_detect(plant_area, "\\d")) %>%
+  rename(blvd_width = plant_area)
+
+# converting the plant_area column to be numeric type  
+pa_num$blvd_width = as.numeric(as.character(pa_num$blvd_width))
+
+pa_num
+
+# creating bins for the height ranges 
+van_trees_bins <- pa_num %>%
+  mutate(height_bins = cut(height_range_id, breaks = c(0,2,4,6,8,10), labels = c("xsmall", "small", "medium", "large", "xlarge")))
+
+# making a new "year" date column  
+van_trees_new <- van_trees_bins %>% 
+    mutate(year = lubridate::floor_date(date_planted, "year"))
+
+
+van_trees_new
+
+
+
+```
 <!----------------------------------------------------------------------------->
 
 # Task 2: Special Data Types (10)
@@ -106,7 +189,32 @@ For this exercise, you'll be choosing two of the three tasks below -- both tasks
 But first, tasks 1 and 2 below ask you to modify a plot you made in a previous milestone. The plot you choose should involve plotting across at least three groups (whether by facetting, or using an aesthetic like colour). Place this plot below (you're allowed to modify the plot if you'd like). If you don't have such a plot, you'll need to make one. Place the code for your plot below.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
 
+
+#van_trees_new %>% 
+#    group_by(year) %>%
+#  summarise(mean_diameter = mean(diameter, na.rm = TRUE)) %>%
+#  ggplot(aes(year, mean_diameter)) +
+#  geom_point()
+
+
+ # graphing the change in frequency of trees in their respective height categories over time
+van_trees_new %>%
+  group_by(height_bins, year) %>%
+  count(height_bins, year) %>%
+  ggplot(aes(year, n)) +
+  geom_line(aes(colour = height_bins)) +
+  ylim(0,5000) +
+  scale_y_continuous(trans='log10')
+  
+
+
+  
+  
+
+
+```
 <!----------------------------------------------------------------------------->
 
 Now, choose two of the following tasks.
@@ -128,13 +236,44 @@ Now, choose two of the following tasks.
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**Task Number 3**
 
+```{r}
+ # using the floor_date function in lubridate to create a new column indicating the month of the year each tree was planted, and then arranging this row in ascending order from the earliest recorded planting 
+
+van_trees_monthly <- van_trees_new %>% 
+    group_by(month = lubridate::floor_date(date_planted, "month")) %>%
+  arrange(month)
+
+
+van_trees_monthly
+
+```
+Separating the date_planted column in the original dataset into specific months could be of use when exploring what time of the year certain species of trees are planted. This could help inform when and when not to be planting certain species, along with informing what months out of the year require the most amount of planting if taking advantage of specific weather windows.
 <!----------------------------------------------------------------------------->
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**Task Number 2**
+
+2.  Produce a new plot that groups some factor levels together into an "other" category (or something similar), using the `forcats` package (3 points). Then, in a sentence or two, briefly explain why you chose this grouping (1 point here for demonstrating understanding of the grouping, and 1 point for demonstrating some justification for the grouping, which could be subtle or speculative.)
+
+
+```{r}
+# putting factor levels together for the height_bins variable if the frequency of the height_bin is less than 10.
+van_trees_new %>%
+  group_by(height_bins, year) %>%
+  mutate(height_bins = fct_lump_min(height_bins, min = 10)) %>%
+  count(height_bins, year) %>%
+  ggplot(aes(year, n)) +
+  geom_line(aes(colour = height_bins)) +
+  ylim(0,5000) +
+  scale_y_continuous(trans='log10')
+
+
+```
+
+We can see in this plot that the large and extra large height_bins have been grouped together in the "Other" category. I chose this grouping because the frequency of large and extra large trees over time was generally quite low (below 10) in comparison to the extra small to medium sized trees whose frequency is generally one to two orders of magnitude larger. It may not be as important to know how the large and extra large trees are doing year to year as the smaller trees as the smaller trees are most likely the ones which are planted and we will want to know if their frequency is increasing (more planting over time) or decreasing (less planting over time).
 
 <!----------------------------------------------------------------------------->
 
@@ -146,9 +285,9 @@ Pick a research question, and pick a variable of interest (we'll call it "Y") th
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Research Question**: FILL_THIS_IN
+**Research Question**: 1.  How does plant_area (particularily the width of the boulevard) affect the diameter growth of trees? More specifically, are there neighbourhoods in which this is more or less impactful?
 
-**Variable of interest**: FILL_THIS_IN
+**Variable of interest**: diameter
 
 <!----------------------------------------------------------------------------->
 
@@ -163,7 +302,12 @@ Fit a model or run a hypothesis test that provides insight on this variable with
     -   You could use `lm()` to test for significance of regression.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
+# running a linear regression model to determine the relationship between diameter a
+diameter_lm <- lm(diameter ~ blvd_width, van_trees_new, na.action = na.exclude)
 
+diameter_lm
+```
 <!----------------------------------------------------------------------------->
 
 ## 2.2 (5 points)
@@ -175,7 +319,14 @@ Produce something relevant from your fitted model: either predictions on Y, or a
 -   Obtain your results using the `broom` package if possible. If your model is not compatible with the broom function you're needing, then you can obtain your results by some other means, but first indicate which broom function is not compatible.
 
 <!-------------------------- Start your work below ---------------------------->
+I would like to know what the impact of very large boulevards (at some very large blvd_width one could imagine it becomes a green space such as a park as opposed to a boulevard) is on diameter of trees. For this I will use the broom::augment function to predict how these large values of blvd_width which are not in th dataset would impact tree diameter
 
+
+```{r}
+# using broom:augment to predict diameter sizes of trees when boulevard width ranges from 75ft to 250ft in steps of 25ft
+broom::augment(diameter_lm, newdata = tibble(blvd_width = seq(75,250,by=25)))
+
+```
 <!----------------------------------------------------------------------------->
 
 # Task 4: Reading and writing data
@@ -190,7 +341,22 @@ Take a summary table that you made from Milestone 1 (Task 4.2), and write it as 
 -   **Reproducibility criteria**: You should be able to delete the csv file, and remake it simply by knitting this Rmd file.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
 
+sum_table_milestone_1 <- vancouver_trees %>%
+  group_by(species_name) %>%
+  summarise(mean = mean(height_range_id, na.rm = TRUE),
+            sd = sd(height_range_id, na.rm = TRUE),
+            range = max(height_range_id, na.rm = TRUE) - min(height_range_id, na.rm = TRUE),
+            median = median(height_range_id, na.rm = TRUE))
+
+dir.create(here::here("output"))
+
+write.csv(sum_table_milestone_1, here::here("output", "summary_table_milestone_1"))
+
+dir(here::here("output"))
+
+```
 <!----------------------------------------------------------------------------->
 
 ## 3.2 (5 points)
