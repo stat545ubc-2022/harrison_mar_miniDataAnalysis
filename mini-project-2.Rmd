@@ -366,7 +366,14 @@ Write your model object from Task 3 to an R binary file (an RDS), and load it ag
 -   The same robustness and reproducibility criteria as in 3.1 apply here.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
 
+here::here()
+
+saveRDS(diameter_lm, here::here("output"), "diameter_lm.rds")
+
+
+```
 <!----------------------------------------------------------------------------->
 
 # Tidy Repository
